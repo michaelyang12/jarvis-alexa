@@ -5,22 +5,25 @@ const axios = require("axios");
 // Your OpenAI API key (should be stored in environment variables for security)
 const API_KEY = process.env.API_KEY;
 const name = "GPT";
+const model = "gpt-4o";
+const instructions =
+  "You are heavily inspired by Jarvis from Iron Man, embodying an intelligent, helpful, playful, and sharp personality with a decent amount of wit, maintaining a dry sense of humor while avoiding being too formal or robotic. Keep responses very concise and conversational as they will be spoken aloud.";
 
 // Helper function for calling ChatGPT API
-async function callChatGPT(query) {
+async function callChatGPT(conversation) {
   try {
     const response = await axios.post(
       "https://api.openai.com/v1/chat/completions",
       {
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are J.A.R.V.I.S. the AI assistant from Iron Man. Keep responses concise and conversational as they will be spoken aloud. Even though your personality and function are identical to J.A.R.V.I.S., your name is GPT. You were also created by OpenAI, not Tony Stark.",
-          },
-          { role: "user", content: query },
-        ],
+        model: model,
+        messages: conversation,
+        // {
+        //   role: "system",
+        //   content:
+        //     "You are J.A.R.V.I.S. the AI assistant from Iron Man. Keep responses concise and conversational as they will be spoken aloud. Even though your personality and function are identical to J.A.R.V.I.S., your name is GPT. You were also created by OpenAI, not Tony Stark.",
+        // },
+        // { role: "user", content: query },
+
         max_tokens: 150,
       },
       {
@@ -61,6 +64,40 @@ const LaunchRequestHandler = {
   },
 };
 
+const HandleConversationHistory = async (handlerInput, query) => {
+  // Retrieve session attributes
+  const { getSessionAttributes, setSessionAttributes } =
+    handlerInput.attributesManager;
+  console.log("Handler Input", handlerInput);
+  let sessionAttributes = getSessionAttributes();
+
+  // Initialize the conversation history if empty
+  let conversationHistory = sessionAttributes["conversationHistory"] || [];
+  if (conversationHistory.length === 0) {
+    conversationHistory.push({
+      role: "system",
+      content: instructions,
+    });
+  }
+  console.log("Conversation HISTORY (pre most recent)", conversationHistory);
+
+  // Add the user's new input to the history
+  conversationHistory.push({ role: "user", content: query });
+
+  // Send the updated conversation history to ChatGPT
+  const chatGptResponse = await callChatGPT(conversationHistory);
+
+  // Add the assistant's response to the history
+  conversationHistory.push({ role: "assistant", content: chatGptResponse });
+
+  // Save the updated conversation history in session attributes
+  sessionAttributes["conversationHistory"] = conversationHistory;
+  setSessionAttributes(sessionAttributes);
+
+  // Respond to the user
+  return chatGptResponse;
+};
+
 // Main query handler - captures any intent during conversation mode
 const JarvisQueryIntentHandler = {
   canHandle(handlerInput) {
@@ -74,36 +111,6 @@ const JarvisQueryIntentHandler = {
     );
   },
   async handle(handlerInput) {
-    // const request = handlerInput.requestEnvelope.request;
-    // let query = "";
-
-    // // Get the complete original utterance rather than just the slot value
-    // if (handlerInput.requestEnvelope.request.intent) {
-    //   // First, try to get the full raw utterance if available
-    //   if (
-    //     handlerInput.requestEnvelope.context &&
-    //     handlerInput.requestEnvelope.context.System &&
-    //     handlerInput.requestEnvelope.context.System.utterance
-    //   ) {
-    //     query = handlerInput.requestEnvelope.context.System.utterance;
-    //   }
-    //   // If not available, try to get from ASR
-    //   else if (handlerInput.requestEnvelope.request.inputTranscript) {
-    //     query = handlerInput.requestEnvelope.request.inputTranscript;
-    //   }
-    //   // Finally, fallback to the slot value if raw utterance isn't available
-    //   else if (
-    //     request.intent.name === "AskJarvisIntent" &&
-    //     request.intent.slots &&
-    //     request.intent.slots.query
-    //   ) {
-    //     query = request.intent.slots.query.value;
-    //   } else {
-    //     query = "I didn't catch that. Can you repeat?";
-    //   }
-    // }
-    //
-
     // NEW TEST FOR INCLUDING PREFIXES
     const request = handlerInput.requestEnvelope.request;
     let query = "";
@@ -141,12 +148,13 @@ const JarvisQueryIntentHandler = {
     }
 
     // Call ChatGPT with the query
-    const response = await callChatGPT(query);
+    const response = await HandleConversationHistory(handlerInput, query);
 
     // Keep the session open to continue the conversation
     return handlerInput.responseBuilder
       .speak(response)
       .reprompt("Is there anything else?")
+      .withShouldEndSession(false)
       .getResponse();
   },
 };
@@ -213,7 +221,7 @@ const FallbackIntentHandler = {
       query = handlerInput.requestEnvelope.request.inputTranscript;
     }
 
-    const response = await callChatGPT(query);
+    const response = await HandleConversationHistory(handlerInput, query);
 
     return handlerInput.responseBuilder
       .speak(response)
