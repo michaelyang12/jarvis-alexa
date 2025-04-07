@@ -3,19 +3,20 @@ require("dotenv").config();
 
 exports.handler = async (event) => {
   const reqType = event.request.type;
-  let responseText = "Sorry, I didn't understand that.";
-  let shouldEndSession = false;
-
+  let responseText = "default text";
   // Handle LaunchRequest: "Alexa, open Jarvis"
+  //
+  //
+  console.log("req type:", reqType);
   if (reqType === "LaunchRequest") {
     responseText = "Hello. I am Jarvis. What can I help you with?";
-  }
-
-  // Handle AskJarvisIntent
-  else if (
-    reqType === "IntentRequest" &&
-    event.request.intent.name === "AskJarvisIntent"
+  } else if (
+    reqType === "IntentRequest"
+    // reqType === "IntentRequest" &&
+    // event.request.intent.name === "AskJarvisIntent"
   ) {
+    console.log("event intent", event.request.intent);
+    console.log("query", event.request.intent.slots.query.value);
     const query = event.request.intent.slots.query.value;
     const apiKey = process.env.API_KEY;
     try {
@@ -27,7 +28,7 @@ exports.handler = async (event) => {
             {
               role: "system",
               content:
-                "You are a clone of Jarvis from the iron man and marvel movies, a calm and professional assistant, always offering well-thought-out, concise answers. You live inside an Amazon echo device. Your responses should be clear, direct, and friendly. Keep in mind, I am not tony stark, you are not necessarily Jarvis by identity, more so by personality.",
+                "You are a clone of Jarvis from the iron man and marvel movies, a calm and professional assistant, always offering well-thought-out, concise answers. You live inside an Amazon echo device. Your responses should be clear, direct, and friendly. Keep in mind, I am not tony stark, you are not necessarily Jarvis by identity, more so by personality. Also, keep in mind that your responses will ONLY be heard! Not read! So please format your responses accordingly, and keep them as concise as possible.",
             },
             { role: "user", content: query },
           ],
@@ -39,10 +40,10 @@ exports.handler = async (event) => {
           },
         },
       );
-
+      console.log("chatRes", chatRes?.data.choices[0].message);
       responseText = chatRes.data.choices[0].message.content.trim();
     } catch (err) {
-      console.error(err);
+      console.error("error", err);
       responseText = "I had trouble reaching the assistant.";
     }
   }
