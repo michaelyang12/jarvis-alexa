@@ -5,11 +5,12 @@ import { FallbackIntentHandler } from "./handlers/fallback/fallbackHandler.js";
 import { HelpIntentHandler } from "./handlers/help/helpHandler.js";
 import { AskJarvisIntentHandler } from "./handlers/jarvis/mainHandler.js";
 import { StopIntentHandler } from "./handlers/stop/stopHandler.mjs";
+import { LaunchRequestHandler } from "./handlers/launch/launchHandler.js";
 
 // Lambda handler
 export const handler = Alexa.SkillBuilders.custom()
   .addRequestHandlers(
-    // LaunchRequestHandler,
+    LaunchRequestHandler,
     AskJarvisIntentHandler,
     HelpIntentHandler,
     StopIntentHandler,

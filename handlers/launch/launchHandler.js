@@ -1,5 +1,5 @@
 import * as Alexa from "ask-sdk-core";
-// Launch request handler - initiates conversation mode
+
 export const LaunchRequestHandler = {
   canHandle(handlerInput) {
     return (
@@ -13,7 +13,7 @@ export const LaunchRequestHandler = {
     sessionAttributes.conversationActive = true;
     handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
-    const speakOutput = `${name} online. How can I assist you today?`;
+    const speakOutput = `GPT online. How can I assist you today?`;
 
     return handlerInput.responseBuilder
       .speak(speakOutput)
